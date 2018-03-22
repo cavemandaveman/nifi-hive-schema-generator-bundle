@@ -16,6 +16,9 @@
  */
 package com.nineteen04labs.nifi.processors
 
+// Commons IO
+import org.apache.commons.io.IOUtils
+
 // NiFi
 import org.apache.nifi.components.PropertyDescriptor
 import org.apache.nifi.processor.{ AbstractProcessor, Relationship }
@@ -24,6 +27,8 @@ import org.apache.nifi.annotation.behavior.{ ReadsAttribute, ReadsAttributes }
 import org.apache.nifi.annotation.behavior.{ WritesAttribute, WritesAttributes }
 import org.apache.nifi.annotation.documentation.{ CapabilityDescription, SeeAlso, Tags }
 import org.apache.nifi.annotation.lifecycle.OnScheduled
+
+import org.json._
 
 @Tags(Array("hive", "database", "sql", "json", "schema"))
 @CapabilityDescription("Reads JSON from FlowFile and interprets the schema. An attribute will be created with the generated HiveQL statement")
@@ -69,14 +74,50 @@ class HiveSchemaGenerator extends AbstractProcessor with HiveSchemaGeneratorProp
 
         val content = session.read(inFlowFile)
 
-        val hql = new CreateHQL(content).table(tableName, location)
+        def checkJSONValid(test: String): Boolean = {
+          var validity = false
+          try {
+            new JSONObject(test)
+            validity = true
+          } catch {
+            case ex: JSONException =>
+              try {
+                new JSONArray(test)
+                validity = true
+              } catch {
+                case ex1: JSONException =>
+                  getLogger().error(ex1.getMessage, ex1)
+                  validity = false
+              }
+              getLogger().error(ex.getMessage, ex)
+          }
+          return validity
+        }
 
-        session.putAttribute(inFlowFile, "hiveql-statement", hql)
+        def processOrNot(isValid: Boolean) = {
+          if (isValid) {
+            try {
+              val hql = new CreateHQL(content).table(tableName, location)
+              session.putAttribute(inFlowFile, "hiveql-statement", hql)
+              session.transfer(inFlowFile, RelSuccess)
+            } catch {
+              case t: Throwable =>
+                getLogger().error(t.getMessage, t)
+                session.transfer(inFlowFile, RelFailure)
+            }
+          } else {
+            session.transfer(inFlowFile, RelFailure)
+          }
+          content.close()
+        }
+
+        val isValidJSON = checkJSONValid(IOUtils.toString(content))
+        val _ = processOrNot(isValidJSON)
+
       }
       case _ =>
         getLogger().warn("FlowFile was null")
     }
 
-    session.transfer(inFlowFile, RelSuccess)
   }
 }

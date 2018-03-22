@@ -30,6 +30,7 @@ class HiveSchemaGeneratorSpec extends FunSpec {
   import HiveSchemaGeneratorRelationships.{ RelSuccess, RelFailure }
 
   val goodContent = """{"id":3, "name":"Simon", "num":0.12, "city":{"area":1234.5434}, "children":[{"name":"Simonca"},{"name":"Matic", "toy":"Ropotulica"}]}"""
+  val badContent = "ThisIsNotJSON"
 
   describe("HiveSchemaGenerator") {
     it("should successfully transfer a FlowFile") {
@@ -47,6 +48,26 @@ class HiveSchemaGeneratorSpec extends FunSpec {
 
       for (flowFile <- runner.getFlowFilesForRelationship(RelSuccess).asScala) {
         flowFile.assertContentEquals(goodContent)
+      }
+    }
+  }
+
+  describe("HiveSchemaGenerator") {
+    it("should fail to transfer a FlowFile") {
+      val processor = new HiveSchemaGenerator
+      val runner = TestRunners.newTestRunner(processor)
+      runner.setProperty(TableName, "myDataTable")
+      runner.setProperty(HDFSLocation, "/test")
+
+      val content = new ByteArrayInputStream(badContent.getBytes)
+      runner.enqueue(content)
+      runner.run(1)
+
+      runner.assertTransferCount(RelSuccess, 0)
+      runner.assertTransferCount(RelFailure, 1)
+
+      for (flowFile <- runner.getFlowFilesForRelationship(RelFailure).asScala) {
+        flowFile.assertContentEquals(badContent)
       }
     }
   }

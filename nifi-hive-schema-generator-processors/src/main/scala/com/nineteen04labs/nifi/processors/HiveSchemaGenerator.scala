@@ -95,10 +95,12 @@ class HiveSchemaGenerator extends AbstractProcessor with HiveSchemaGeneratorProp
         }
 
         def processOrNot(isValid: Boolean) = {
+          val flowFile = session.read(inFlowFile)
           if (isValid) {
             try {
-              val hql = new CreateHQL(content).table(tableName, location)
+              val hql = new CreateHQL(flowFile).table(tableName, location)
               session.putAttribute(inFlowFile, "hiveql-statement", hql)
+              System.out.println("Attribute: " + hql)
               session.transfer(inFlowFile, RelSuccess)
             } catch {
               case t: Throwable =>
@@ -108,7 +110,7 @@ class HiveSchemaGenerator extends AbstractProcessor with HiveSchemaGeneratorProp
           } else {
             session.transfer(inFlowFile, RelFailure)
           }
-          content.close()
+          flowFile.close()
         }
 
         val isValidJSON = checkJSONValid(IOUtils.toString(content))

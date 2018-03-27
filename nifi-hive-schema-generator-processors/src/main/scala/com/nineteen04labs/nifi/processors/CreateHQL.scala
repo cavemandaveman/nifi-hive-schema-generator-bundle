@@ -72,7 +72,7 @@ class CreateHQL(stream: InputStream) {
   def out(json: JsValue, i: Int = 0, key: Option[String] = None): String = {
     val pad = "\t" * i
     pad + key.fold("")(_ + " ") + (json match {
-      case JsNull => "???"
+      case JsNull => "STRING"
       case _: JsBoolean => "BOOLEAN"
 
       /*
@@ -100,10 +100,10 @@ class CreateHQL(stream: InputStream) {
           "ARRAY<", out(x.head, i + 1), s"$pad>") mkString "\n"
 
       case JsObject(x) =>
-        (Seq("STRUCT<") ++ x.map {
+        "STRUCT<\n" + x.map {
           case (k, v) =>
             out(v, i + 1, Some("`" + k + "`" + ":"))
-        } ++ Seq(s"$pad>")).mkString("\n")
+        }.mkString(",\n") + "\n" + pad + ">"
     })
   }
 

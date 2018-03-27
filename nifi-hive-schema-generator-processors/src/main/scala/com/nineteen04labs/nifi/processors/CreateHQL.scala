@@ -75,9 +75,15 @@ class CreateHQL(stream: InputStream) {
       case JsNull => "???"
       case _: JsBoolean => "BOOLEAN"
 
-      case JsString(x) if 0 < x.size && x.size < 65356 =>
-        s"VARCHAR(${x.size})"
-      case _: JsString => "STRING"
+      /*
+      * Use STRING instead of VARCHAR
+      * https://community.hortonworks.com/questions/48260/hive-string-vs-varchar-performance.html
+      *
+      * case JsString(x) if 0 < x.size && x.size < 65356 => s"VARCHAR(${x.size})"
+      * case _: JsString => "STRING"
+      *
+      */
+      case JsString(x) => "STRING"
 
       case JsNumber(x) if (x.scale == 0) =>
         if (x.isValidByte) "TINYINT"
@@ -96,7 +102,7 @@ class CreateHQL(stream: InputStream) {
       case JsObject(x) =>
         (Seq("STRUCT<") ++ x.map {
           case (k, v) =>
-            out(v, i + 1, Some(k + ":"))
+            out(v, i + 1, Some("`" + k + "`" + ":"))
         } ++ Seq(s"$pad>")).mkString("\n")
     })
   }
@@ -104,7 +110,7 @@ class CreateHQL(stream: InputStream) {
   def definition(i: Int = 0) = schema match {
     case JsObject(x) =>
       x.map {
-        case (k, v) => out(v, i, Some(k))
+        case (k, v) => out(v, i, Some("`" + k + "`"))
       } mkString ",\n"
     case _ => "ERROR"
   }

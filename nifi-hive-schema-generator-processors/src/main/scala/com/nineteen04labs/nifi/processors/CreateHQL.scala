@@ -86,8 +86,8 @@ class CreateHQL(stream: InputStream) {
       case JsString(x) => "STRING"
 
       case JsNumber(x) if (x.scale == 0) =>
-        if (x.isValidByte) "TINYINT"
-        else if (x.isValidShort) "SMALLINT"
+        if (x.isValidByte) "INT"
+        else if (x.isValidShort) "INT"
         else if (x.isValidInt) "INT"
         else if (x.isValidLong) "BIGINT"
         else s"NUMERIC(${x.precision}, 0)"
@@ -110,15 +110,16 @@ class CreateHQL(stream: InputStream) {
   def definition(i: Int = 0) = schema match {
     case JsObject(x) =>
       x.map {
-        case (k, v) => out(v, i, Some("`" + k + "`"))
+        case (k, v) =>
+          out(v, i, Some("`" + k + "`"))
       } mkString ",\n"
     case _ => "ERROR"
   }
 
   def table(name: String, location: String) = Seq(
     s"CREATE EXTERNAL TABLE $name (",
-    definition(1).replaceAll("[.:-]", "_"),
-    ") ROW FORMAT SERDE 'org.apache.hadoop.hive.contrib.serde2.JsonSerde';",
+    definition(1).replaceAll("[.-]", "_"),
+    ") ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe';",
     s"location '$location';").mkString("\n")
 
 }

@@ -117,7 +117,7 @@ class CreateHQL(stream: InputStream) {
 
   def table(name: String, location: String) = Seq(
     s"CREATE EXTERNAL TABLE $name (",
-    definition(1).replace('.', '_'),
+    definition(1).replaceAll("[.:-]", "_"),
     ") ROW FORMAT SERDE 'org.apache.hadoop.hive.contrib.serde2.JsonSerde';",
     s"location '$location';").mkString("\n")
 

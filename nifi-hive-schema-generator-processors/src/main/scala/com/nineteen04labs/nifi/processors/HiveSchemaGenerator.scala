@@ -100,7 +100,7 @@ class HiveSchemaGenerator extends AbstractProcessor with HiveSchemaGeneratorProp
             try {
               val hql = new CreateHQL(flowFile).table(tableName, location)
               session.putAttribute(inFlowFile, "hiveql-statement", hql)
-              System.out.println("Attribute: " + hql)
+              getLogger().debug("Attribute Value: \n" + hql)
               session.transfer(inFlowFile, RelSuccess)
             } catch {
               case t: Throwable =>

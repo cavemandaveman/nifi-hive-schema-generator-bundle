@@ -17,6 +17,7 @@
 package com.nineteen04labs.nifi.processors
 
 import java.io._
+import scala.io.Source
 
 // ScalaTest
 import org.scalatest._
@@ -29,7 +30,7 @@ class HiveSchemaGeneratorSpec extends FunSpec {
   import HiveSchemaGeneratorProperties.{ TableName, HDFSLocation }
   import HiveSchemaGeneratorRelationships.{ RelSuccess, RelFailure }
 
-  val goodContent = """{"id":3, "name":"Simon", "num":0.12, "city":{"area":1234.5434}, "children":[{"name":"Simonca"},{"name":"Matic", "toy":"Ropotulica"}]}"""
+  val goodContent = Source.fromFile("src/test/resources/flowfile.json").mkString
   val badContent = "ThisIsNotJSON"
 
   describe("HiveSchemaGenerator") {

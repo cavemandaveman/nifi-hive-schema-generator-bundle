@@ -51,12 +51,7 @@ class CreateHQL(stream: InputStream) {
     (a, prepare(b)) match {
       case (JsNull, x) => x
       case (x, JsNull) => x
-      case (x: JsBoolean, _: JsBoolean) => x
 
-      case (a @ JsString(ax), b @ JsString(bx)) =>
-        if (ax.size > bx.size) a else b
-
-      case (JsNumber(ax), JsNumber(bx)) => JsNumber((ax max bx) setScale (ax.scale max bx.scale))
       case (JsArray(ax), JsArray(bx)) => JsArray(Seq(merge(ax.head, bx.head)))
 
       case (JsObject(ax), JsObject(bx)) =>
@@ -65,36 +60,14 @@ class CreateHQL(stream: InputStream) {
           case Seq((_, ax), (_, bx)) => merge(ax, bx)
         }.toSeq)
 
-      case _ => throw new RowMismatch(a, b)
+      // If there is a mismatch, always return string
+      case _ => JsString("")
     }
   }
 
   def out(json: JsValue, i: Int = 0, key: Option[String] = None): String = {
     val pad = "\t" * i
     pad + key.fold("")(_ + " ") + (json match {
-      case JsNull => "STRING"
-      case _: JsBoolean => "BOOLEAN"
-
-      /*
-      * Use STRING instead of VARCHAR
-      * https://community.hortonworks.com/questions/48260/hive-string-vs-varchar-performance.html
-      *
-      * case JsString(x) if 0 < x.size && x.size < 65356 => s"VARCHAR(${x.size})"
-      * case _: JsString => "STRING"
-      *
-      */
-      case JsString(x) => "STRING"
-
-      case JsNumber(x) if (x.scale == 0) =>
-        if (x.isValidByte) "INT"
-        else if (x.isValidShort) "INT"
-        else if (x.isValidInt) "INT"
-        else if (x.isValidLong) "BIGINT"
-        else s"NUMERIC(${x.precision}, 0)"
-      case JsNumber(x) if (x.precision <= 7) => "FLOAT"
-      case JsNumber(x) if (x.precision <= 15) => "DOUBLE"
-      case JsNumber(x) => s"NUMERIC(${x.precision}, ${x.scale})"
-
       case JsArray(x) =>
         Seq(
           "ARRAY<", out(x.head, i + 1), s"$pad>") mkString "\n"
@@ -104,6 +77,8 @@ class CreateHQL(stream: InputStream) {
           case (k, v) =>
             out(v, i + 1, Some("`" + k + "`" + ":"))
         }.mkString(",\n") + "\n" + pad + ">"
+
+      case _ => "STRING"
     })
   }
 

@@ -92,9 +92,10 @@ class CreateHQL(stream: InputStream) {
   }
 
   def table(name: String, location: String) = Seq(
+    s"DROP TABLE $name;",
     s"CREATE EXTERNAL TABLE $name (",
     definition(1).replaceAll("[.-]", "_"),
-    ") ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe';",
+    ") ROW FORMAT SERDE 'org.apache.hive.hcatalog.data.JsonSerDe'",
     s"location '$location';").mkString("\n")
 
 }

@@ -114,7 +114,8 @@ class HiveSchemaGenerator extends AbstractProcessor with HiveSchemaGeneratorProp
         }
 
         val isValidJSON = checkJSONValid(IOUtils.toString(content))
-        val _ = processOrNot(isValidJSON)
+        content.close()
+        processOrNot(isValidJSON)
 
       }
       case _ =>
